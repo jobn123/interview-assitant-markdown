@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interview Assistant — 面试助手</title>
+<style>
+/* ========== CSS Variables ========== */
+:root {
+  --bg: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --text: #1a1a2e;
+  --text-secondary: #6c757d;
+  --border: #dee2e6;
+  --accent: #4361ee;
+  --accent-hover: #3a56d4;
+  --question-bg: #f0f4ff;
+  --question-hover: #e0e8ff;
+  --answer-bg: #fafbfc;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --radius: 10px;
+  --transition: 0.2s ease;
+}
+
+[data-theme="dark"] {
+  --bg: #1a1a2e;
+  --bg-secondary: #16213e;
+  --text: #e8e8e8;
+  --text-secondary: #a0a0b0;
+  --border: #2a2a4a;
+  --accent: #6c8aff;
+  --accent-hover: #8ba3ff;
+  --question-bg: #1e2a45;
+  --question-hover: #253355;
+  --answer-bg: #1a1a2e;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* ========== Reset & Base ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.7;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* ========== Header ========== */
+header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+
+header h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ========== Tab Bar ========== */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+
+.tab-btn {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--transition);
+}
+
+.tab-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.tab-btn:hover:not(.active) {
+  background: var(--question-bg);
+  color: var(--text);
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.theme-btn {
+  width: 36px; height: 36px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+
+.theme-btn:hover { background: var(--question-bg); }
+
+/* ========== Main Content ========== */
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.view { display: none; }
+.view.active { display: block; }
+
+/* ========== Edit View ========== */
+#markdown-input {
+  width: 100%;
+  min-height: 420px;
+  padding: 20px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+  font-size: 0.9rem;
+  line-height: 1.8;
+  resize: vertical;
+  transition: border var(--transition);
+}
+
+#markdown-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  border-style: solid;
+}
+
+.input-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover { background: var(--accent-hover); }
+
+.btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+}
+
+.btn-outline:hover { background: var(--question-bg); }
+
+.file-info {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* Drag & Drop overlay */
+#drag-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(67, 97, 238, 0.08);
+  border: 3px dashed var(--accent);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+#drag-overlay.active { display: flex; }
+
+/* ========== Review View ========== */
+.review-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  position: sticky;
+  top: 72px;
+  z-index: 50;
+}
+
+.counter {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-left: auto;
+}
+
+/* Q&A Card */
+.qa-card {
+  margin-bottom: 20px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  transition: box-shadow var(--transition);
+}
+
+.qa-card:hover { box-shadow: var(--shadow); }
+
+.qa-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--question-bg);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition);
+  border-bottom: 1px solid transparent;
+}
+
+.qa-header:hover { background: var(--question-hover); }
+
+.qa-card.revealed .qa-header {
+  border-bottom-color: var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.toggle-icon {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: transform 0.3s ease;
+}
+
+.qa-card.revealed .toggle-icon {
+  transform: rotate(45deg);
+}
+
+.qa-question {
+  flex: 1;
+  padding-top: 2px;
+}
+
+.qa-question h2, .qa-question h3, .qa-question h4,
+.qa-question h5, .qa-question h6, .qa-question h1 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.qa-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.45s ease-out;
+}
+
+.qa-card.revealed .qa-body {
+  max-height: 8000px;
+  transition: max-height 0.6s ease-in;
+}
+
+.qa-answer {
+  padding: 20px;
+  background: var(--answer-bg);
+  line-height: 1.8;
+}
+
+.qa-answer p { margin-bottom: 12px; }
+.qa-answer p:last-child { margin-bottom: 0; }
+.qa-answer ul, .qa-answer ol { margin: 8px 0; padding-left: 24px; }
+.qa-answer li { margin-bottom: 4px; }
+.qa-answer pre {
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+}
+.qa-answer code {
+  background: var(--bg-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+.qa-answer pre code {
+  background: transparent;
+  padding: 0;
+}
+.qa-answer blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 16px;
+  margin: 12px 0;
+  color: var(--text-secondary);
+}
+.qa-answer table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+.qa-answer th, .qa-answer td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+.qa-answer th { background: var(--bg-secondary); }
+
+/* Preamble / Postamble */
+.preamble, .postamble {
+  padding: 16px 0;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.postamble {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.divider {
+  border: none;
+  border-top: 2px dashed var(--border);
+  margin: 32px 0;
+}
+
+/* No questions state */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.empty-state .icon { font-size: 3rem; margin-bottom: 16px; }
+.empty-state h3 { font-size: 1.2rem; margin-bottom: 8px; color: var(--text); }
+
+/* ========== Print Styles ========== */
+@media print {
+  header, .review-toolbar, .toggle-icon, .input-actions, .tab-bar {
+    display: none !important;
+  }
+  .qa-body {
+    max-height: none !important;
+  }
+  .qa-card {
+    break-inside: avoid;
+    border: 1px solid #ddd;
+    margin-bottom: 12px;
+  }
+  body { font-size: 12pt; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Interview Assistant</h1>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-view="edit">✏️ 编辑</button>
+    <button class="tab-btn" data-view="review">📖 复习</button>
+  </div>
+  <div class="header-actions">
+    <button class="theme-btn" id="theme-btn" title="切换主题">🌙</button>
+  </div>
+</header>
+
+<main>
+  <!-- Edit View -->
+  <section id="edit-view" class="view active">
+    <textarea id="markdown-input" placeholder="在此粘贴你的 Markdown 笔记...
+
+支持的格式：
+  ## Q: 这是问题？
+  这是隐式答案（Q标题之后的内容）
+
+  ## Q: 另一个问题？
+  ## A: 这是显式答案（A标题之后的文本）"></textarea>
+    <div class="input-actions">
+      <button class="btn btn-primary" id="review-btn">📖 开始复习</button>
+      <button class="btn btn-outline" id="load-file-btn">📂 加载 .md 文件</button>
+      <input type="file" id="file-input" accept=".md,.markdown" hidden>
+      <span class="file-info" id="file-info"></span>
+    </div>
+  </section>
+
+  <!-- Review View -->
+  <section id="review-view" class="view">
+    <div class="review-toolbar" id="review-toolbar">
+      <button class="btn btn-primary" id="toggle-all-btn">👁️ 显示全部</button>
+      <span class="counter" id="counter"></span>
+      <button class="btn btn-outline" id="back-edit-btn" style="margin-left:8px;">✏️ 返回编辑</button>
+    </div>
+    <div id="qa-container"></div>
+  </section>
+
+  <!-- Drag overlay -->
+  <div id="drag-overlay">📂 释放以加载 .md 文件</div>
+</main>
+
+<script>
+// ==================== Core Parser (内嵌) ====================
+function normalizeMarkdown(text) {
+  const lines = text.split('\n');
+  let inFence = false;
+  let fenceChar = '';
+
+  const result = lines.map(line => {
+    if (/^```/.test(line) || /^~~~/.test(line)) {
+      if (!inFence) { inFence = true; fenceChar = line.trim().slice(0, 3); }
+      else if (line.trim().startsWith(fenceChar)) { inFence = false; fenceChar = ''; }
+      return line;
+    }
+    if (inFence) return line;
+
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
+    if (!headingMatch) return line;
+
+    const hashes = headingMatch[1];
+    let content = headingMatch[2];
+
+    // 全角冒号 → 半角冒号
+    content = content.replace(/：/g, ':');
+    // 中文"问题"标记 → Q:
+    content = content.replace(/^问题\d*\s*:?\s*/i, 'Q: ');
+    // 中文"答案"标记 → A:
+    content = content.replace(/^答案\d*\s*:?\s*/i, 'A: ');
+    // 英文 Question / Answer → Q: / A:
+    content = content.replace(/^Question\s*:?\s*/i, 'Q: ');
+    content = content.replace(/^Answer\s*:?\s*/i, 'A: ');
+    // 编号 Q1:/Q2: → Q:
+    content = content.replace(/^Q\d+\s*:?\s*/i, 'Q: ');
+    // 删除 Q:/A: 周围的加粗/斜体标记
+    content = content.replace(/^\*{1,3}\s*(Q:?|A:?)\s*\*{1,3}\s*/i, '$1 ');
+    // 阿拉伯数字编号标题 → 隐式问题
+    // "1. 事件循环" / "2、原型链" / "3) this指向" / "10 其他"
+    // 纯文本标题 → 隐式问题（兜底规则，仅 ###+ 深度）
+    // 为保护文档标题和章节标题，不对 h1/h2 级别启用
+    if (!/^[QA][:\s]/i.test(content)) {
+      const numberedMatch = content.match(/^(\d+)(?:[\.、．)\-]\s*|\s+)(.+)/);
+      if (numberedMatch) {
+        content = 'Q: ' + numberedMatch[2];
+      } else if (hashes.length >= 2) {
+        // 仅对 ## 及以上深度启用纯文本兜底（h1 保留为文档标题）
+        const isChineseSection = /^[一二三四五六七八九十百]+\s*[、，,.]/.test(content);
+        const isNonQuestion = /^(参考|总结|附录|小结|参考资料|References|前言|后记|致谢|鸣谢)/i.test(content);
+        if (!isChineseSection && !isNonQuestion) {
+          content = 'Q: ' + content;
+        }
+      }
+    }
+    // 中文冒号再次确保
+    content = content.replace(/^Q\s*：\s*/i, 'Q: ');
+    content = content.replace(/^A\s*：\s*/i, 'A: ');
+    // 确保 Q: / A: 后面有空格
+    content = content.replace(/^(Q:)\s*/i, '$1 ');
+    content = content.replace(/^(A:)\s*/i, '$1 ');
+
+    return hashes + ' ' + content;
+  });
+
+  return result.join('\n');
+}
+
+function isFence(line) {
+  return /^```/.test(line) || /^~~~/.test(line);
+}
+
+function parseHeading(line) {
+  const match = line.match(/^(#{1,6})\s+(.*)/);
+  if (!match) return null;
+  return { level: match[1].length, raw: line, content: match[2].trim() };
+}
+
+function extractQuestion(headingContent) {
+  const match = headingContent.match(/^Q:?\s+/i);
+  if (!match) return null;
+  return headingContent.slice(match[0].length).trim();
+}
+
+function extractAnswer(headingContent) {
+  const match = headingContent.match(/^A:?\s+/i);
+  if (!match) return null;
+  return headingContent.slice(match[0].length).trim();
+}
+
+function parseMarkdown(text) {
+  let normalized = text
+    .replace(/^﻿/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  // 格式归一化
+  normalized = normalizeMarkdown(normalized);
+  const lines = normalized.split('\n');
+  const pairs = [];
+  let preamble = '', postamble = '';
+  let sawFirstQuestion = false;
+  let currentQuestion = null;
+  let hasExplicitAnswer = false;
+  let implicitBuffer = [];
+  let inFence = false, fenceChar = '';
+  const segments = [];
+  let currentSegment = { type: 'content', lines: [] };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isFence(line)) {
+      if (!inFence) { inFence = true; fenceChar = line.trim().slice(0, 3); }
+      else if (line.trim().startsWith(fenceChar)) { inFence = false; fenceChar = ''; }
+      currentSegment.lines.push(line);
+      continue;
+    }
+    if (inFence) { currentSegment.lines.push(line); continue; }
+    const heading = parseHeading(line);
+    if (heading) {
+      if (currentSegment.lines.length > 0 || currentSegment.type === 'heading') {
+        segments.push(currentSegment);
+      }
+      currentSegment = { type: 'heading', heading, lines: [line] };
+    } else {
+      currentSegment.lines.push(line);
+    }
+  }
+  if (currentSegment.lines.length > 0 || currentSegment.type === 'heading') {
+    segments.push(currentSegment);
+  }
+
+  for (const seg of segments) {
+    if (seg.type === 'heading') {
+      const h = seg.heading;
+      const qText = extractQuestion(h.content);
+      const aText = extractAnswer(h.content);
+      if (qText !== null) {
+        finalizeCurrentQuestion();
+        sawFirstQuestion = true;
+        currentQuestion = {
+          id: 'q-' + pairs.length,
+          question: qText,
+          answer: '',
+          type: null,
+          level: h.level
+        };
+        hasExplicitAnswer = false;
+        implicitBuffer = [];
+        const rest = seg.lines.slice(1).join('\n').trim();
+        if (rest) implicitBuffer.push(rest);
+        pairs.push(currentQuestion);
+      } else if (aText !== null && currentQuestion) {
+        let answerParts = [];
+        if (!hasExplicitAnswer && implicitBuffer.length > 0) {
+          answerParts.push(implicitBuffer.join('\n\n').trim());
+        }
+        if (aText) answerParts.push(aText);
+        const explicitStart = seg.lines.slice(1).join('\n').trim();
+        if (explicitStart) answerParts.push(explicitStart);
+        currentQuestion.answer = answerParts.join('\n\n').trim();
+        currentQuestion.type = 'explicit';
+        hasExplicitAnswer = true;
+        implicitBuffer = [];
+      } else {
+        if (currentQuestion && !hasExplicitAnswer) {
+          implicitBuffer.push(seg.lines.join('\n'));
+        } else if (!sawFirstQuestion) {
+          preamble += seg.lines.join('\n') + '\n';
+        } else {
+          postamble += seg.lines.join('\n') + '\n';
+        }
+      }
+    } else {
+      if (currentQuestion && !hasExplicitAnswer) {
+        implicitBuffer.push(seg.lines.join('\n'));
+      } else if (!sawFirstQuestion) {
+        preamble += seg.lines.join('\n') + '\n';
+      } else {
+        postamble += seg.lines.join('\n') + '\n';
+      }
+    }
+  }
+
+  finalizeCurrentQuestion();
+
+  function finalizeCurrentQuestion() {
+    if (currentQuestion && !hasExplicitAnswer) {
+      currentQuestion.answer = implicitBuffer.join('\n\n').trim();
+      currentQuestion.type = currentQuestion.answer ? 'implicit' : 'implicit';
+    }
+  }
+
+  return {
+    pairs: pairs.map(p => ({
+      id: p.id, question: p.question, answer: p.answer,
+      type: p.type || 'implicit', level: p.level
+    })),
+    preamble: preamble.trim(),
+    postamble: postamble.trim()
+  };
+}
+
+// ==================== Simple Markdown to HTML Renderer ====================
+function renderMarkdownToHTML(md) {
+  if (!md) return '';
+  let html = md;
+
+  // Fenced code blocks (preserve from other transformations)
+  const codeBlocks = [];
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push({ lang, code: code.trimEnd() });
+    return `%%CODEBLOCK_${idx}%%`;
+  });
+
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Bold & italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // Images (before links)
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+
+  // Links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+  // Headings (atx)
+  html = html.replace(/^###### (.+)$/gm, '<h6>$1</h6>');
+  html = html.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
+  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+  // Horizontal rules
+  html = html.replace(/^(---|\*\*\*|___)\s*$/gm, '<hr>');
+
+  // Blockquotes
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+  html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+
+  // Unordered lists
+  html = html.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)\n(<li>)/g, '$1\n$2');
+  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+
+  // Ordered lists
+  html = html.replace(/^\d+\. (.+)$/gm, '<oli>$1</oli>');
+  html = html.replace(/((?:<oli>.*<\/oli>\n?)+)/g, '<ol>$1</ol>');
+  html = html.replace(/<\/?oli>/g, (m) => m === '<oli>' ? '<li>' : '</li>');
+
+  // Paragraphs (consecutive non-empty, non-tag-wrapped lines)
+  html = html.replace(/^(?!<[houlbip]|<hr|<pre|<code|<table)(.+)$/gm, '<p>$1</p>');
+  // Fix: unwrap single <p> that wraps block elements
+  html = html.replace(/<p><(h[1-6]|ul|ol|pre|blockquote|hr|table)/g, '<$1');
+  html = html.replace(/<\/(h[1-6]|ul|ol|pre|blockquote|table)><\/p>/g, '</$1>');
+
+  // Restore code blocks
+  html = html.replace(/%%CODEBLOCK_(\d+)%%/g, (_, idx) => {
+    const cb = codeBlocks[idx];
+    const langAttr = cb.lang ? ` class="language-${cb.lang}"` : '';
+    return `<pre><code${langAttr}>${escapeHTML(cb.code)}</code></pre>`;
+  });
+
+  return html;
+}
+
+function escapeHTML(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ==================== App State ====================
+let parseResult = null;
+let currentView = 'edit';
+
+// ==================== DOM Elements ====================
+const $editView = document.getElementById('edit-view');
+const $reviewView = document.getElementById('review-view');
+const $markdownInput = document.getElementById('markdown-input');
+const $qaContainer = document.getElementById('qa-container');
+const $toggleAllBtn = document.getElementById('toggle-all-btn');
+const $counter = document.getElementById('counter');
+const $fileInput = document.getElementById('file-input');
+const $fileInfo = document.getElementById('file-info');
+const $dragOverlay = document.getElementById('drag-overlay');
+const $themeBtn = document.getElementById('theme-btn');
+
+// ==================== View Switching ====================
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  $editView.classList.toggle('active', view === 'edit');
+  $reviewView.classList.toggle('active', view === 'review');
+
+  if (view === 'review') {
+    const text = $markdownInput.value;
+    if (text.trim()) {
+      parseResult = parseMarkdown(text);
+      renderReview();
+    } else {
+      $qaContainer.innerHTML = '<div class="empty-state"><div class="icon">📝</div><h3>还没有内容</h3><p>请先在编辑区粘贴你的 Markdown 笔记</p></div>';
+    }
+  }
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchView(btn.dataset.view));
+});
+
+// ==================== Render Review ====================
+function renderReview() {
+  const { pairs, preamble, postamble } = parseResult;
+  let html = '';
+
+  // Preamble
+  if (preamble) {
+    html += `<div class="preamble">${renderMarkdownToHTML(preamble)}</div>`;
+  }
+
+  // Q&A Cards
+  if (pairs.length === 0) {
+    html += '<div class="empty-state"><div class="icon">🔍</div><h3>未找到问答内容</h3><p>请确保笔记中包含 <code>## Q:</code> 格式的标题</p></div>';
+  } else {
+    pairs.forEach((pair, idx) => {
+      const hTag = 'h' + Math.min(pair.level, 6);
+      html += `
+        <div class="qa-card" data-qa-id="${pair.id}">
+          <div class="qa-header" onclick="toggleAnswer('${pair.id}')">
+            <span class="toggle-icon">+</span>
+            <div class="qa-question">
+              <${hTag}>${escapeHTML(pair.question)}</${hTag}>
+            </div>
+          </div>
+          <div class="qa-body">
+            <div class="qa-answer">${renderMarkdownToHTML(pair.answer) || '<em style="color:var(--text-secondary)">（未填写答案）</em>'}</div>
+          </div>
+        </div>`;
+    });
+  }
+  html += '<hr class="divider">';
+
+  // Postamble
+  if (postamble) {
+    html += `<div class="postamble">${renderMarkdownToHTML(postamble)}</div>`;
+  }
+
+  $qaContainer.innerHTML = html;
+  updateCounter();
+  updateToggleButton();
+}
+
+// ==================== Toggle Logic ====================
+function toggleAnswer(qaId) {
+  const card = document.querySelector(`[data-qa-id="${qaId}"]`);
+  if (card) {
+    card.classList.toggle('revealed');
+    updateCounter();
+    updateToggleButton();
+  }
+}
+
+function showAll() {
+  document.querySelectorAll('.qa-card').forEach(c => c.classList.add('revealed'));
+  updateCounter();
+  updateToggleButton();
+}
+
+function hideAll() {
+  document.querySelectorAll('.qa-card').forEach(c => c.classList.remove('revealed'));
+  updateCounter();
+  updateToggleButton();
+}
+
+function toggleAll() {
+  const total = document.querySelectorAll('.qa-card').length;
+  const revealed = document.querySelectorAll('.qa-card.revealed').length;
+  if (revealed === total && total > 0) {
+    hideAll();
+  } else {
+    showAll();
+  }
+}
+
+function updateCounter() {
+  const total = document.querySelectorAll('.qa-card').length;
+  const revealed = document.querySelectorAll('.qa-card.revealed').length;
+  $counter.textContent = `${revealed}/${total} 已显示`;
+}
+
+function updateToggleButton() {
+  const total = document.querySelectorAll('.qa-card').length;
+  const revealed = document.querySelectorAll('.qa-card.revealed').length;
+  if (revealed === total && total > 0) {
+    $toggleAllBtn.textContent = '🙈 隐藏全部';
+  } else {
+    $toggleAllBtn.textContent = '👁️ 显示全部';
+  }
+}
+
+// 一个按钮切换显示/隐藏全部
+$toggleAllBtn.addEventListener('click', toggleAll);
+
+// ==================== Edit View Actions ====================
+document.getElementById('review-btn').addEventListener('click', () => switchView('review'));
+document.getElementById('back-edit-btn').addEventListener('click', () => switchView('edit'));
+
+// Load file
+document.getElementById('load-file-btn').addEventListener('click', () => $fileInput.click());
+$fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) loadFile(file);
+});
+
+// Drag & Drop
+let dragCounter = 0;
+document.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; if (dragCounter === 1) $dragOverlay.classList.add('active'); });
+document.addEventListener('dragleave', (e) => { e.preventDefault(); dragCounter--; if (dragCounter === 0) $dragOverlay.classList.remove('active'); });
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  $dragOverlay.classList.remove('active');
+  const file = e.dataTransfer.files[0];
+  if (file && (file.name.endsWith('.md') || file.name.endsWith('.markdown'))) {
+    loadFile(file);
+  }
+});
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    $markdownInput.value = ev.target.result;
+    $fileInfo.textContent = `已加载: ${file.name}`;
+    saveToStorage();
+    parseResult = parseMarkdown($markdownInput.value);
+    if (currentView === 'review') renderReview();
+  };
+  reader.readAsText(file);
+}
+
+// ==================== Keyboard Shortcuts ====================
+document.addEventListener('keydown', (e) => {
+  // Shift+A: toggle all
+  if (e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+    e.preventDefault();
+    toggleAll();
+  }
+  // Shift+E: switch to Edit
+  if (e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+    e.preventDefault();
+    switchView('edit');
+  }
+  // Shift+R: switch to Review
+  if (e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+    e.preventDefault();
+    switchView('review');
+  }
+});
+
+// ==================== Persistence ====================
+function saveToStorage() {
+  try {
+    localStorage.setItem('ia-markdown', $markdownInput.value);
+  } catch(e) { /* quota exceeded, ignore */ }
+}
+
+function loadFromStorage() {
+  try {
+    const saved = localStorage.getItem('ia-markdown');
+    if (saved) $markdownInput.value = saved;
+  } catch(e) { /* ignore */ }
+}
+
+$markdownInput.addEventListener('input', () => {
+  // Debounced save
+  clearTimeout($markdownInput._saveTimeout);
+  $markdownInput._saveTimeout = setTimeout(saveToStorage, 500);
+});
+
+// ==================== Theme ====================
+function initTheme() {
+  try {
+    const saved = localStorage.getItem('ia-theme');
+    applyTheme(saved || 'light');
+  } catch(e) { applyTheme('light'); }
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  $themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem('ia-theme', theme); } catch(e) {}
+}
+
+$themeBtn.addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+// ==================== Init ====================
+function init() {
+  initTheme();
+  loadFromStorage();
+  // Pre-parse if there's content
+  if ($markdownInput.value.trim()) {
+    parseResult = parseMarkdown($markdownInput.value);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+/**
+ * Interview Assistant — Content Styles
+ * 基础装饰样式，核心显隐由 JS inline style 控制（最可靠）
+ */
+
+/* Toolbar */
+#ia-toolbar {
+  position: fixed !important;
+  top: 16px !important;
+  right: 16px !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+}
+
+/* 答案容器兜底隐藏 */
+.ia-body {
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.ia-card.ia-revealed .ia-body {
+  max-height: 8000px !important;
+}
+
+/* Toggle icon 旋转 */
+.ia-card .ia-toggle-icon {
+  transition: transform 0.3s ease !important;
+}
+
+.ia-card.ia-revealed .ia-toggle-icon {
+  transform: rotate(45deg) !important;
+}

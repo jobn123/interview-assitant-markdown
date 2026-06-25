@@ -59,6 +59,14 @@
     // 阿拉伯数字编号：1. / 2、/ 3) / 10 标题
     if (/^\d+[\.、．)\-]?\s/.test(n)) return true;
 
+    // 纯文本标题 → 隐式问题（兜底规则）
+    // 排除中文数字章节和非问题标记
+    {
+      const isChineseSection = /^[一二三四五六七八九十百]+\s*[、，,.]/.test(n);
+      const isNonQuestion = /^(参考|总结|附录|小结|参考资料|References|前言|后记|致谢|鸣谢)/i.test(n);
+      if (!isChineseSection && !isNonQuestion) return true;
+    }
+
     return false;
   }
 

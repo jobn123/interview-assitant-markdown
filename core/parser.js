@@ -66,17 +66,23 @@ function normalizeMarkdown(text) {
     // 6. 删除标题中 Q: / A: 周围的加粗/斜体标记
     content = content.replace(/^\*{1,3}\s*(Q:?|A:?)\s*\*{1,3}\s*/i, '$1 ');
 
-    // 7. 【新增】阿拉伯数字编号标题 → 隐式问题
-    //    仅在尚未识别为 Q:/A: 时生效
+    // 7. 阿拉伯数字编号标题 → 隐式问题
     //    "1. 事件循环" / "2、原型链" / "3) this指向" / "10 其他"
     //    但跳过中文数字 "一、" / "二、" 避免误伤章节标题
-    if (!/^(Q|A):\s/i.test(content)) {
-      // 数字 + (分隔符+可选空格 | 纯空格) + 文本
-      // 有分隔符时后面可不加空格（如中文顿号 2、原型链）
-      // 无分隔符时必须有空格（区分 "10 标题" 和纯数字 "10"）
+    //
+    // 10. 纯文本标题 → 隐式问题（兜底规则，仅 ###+ 深度）
+    //    为保护文档标题和章节标题，不对 h1/h2 级别启用
+    if (!/^[QA][:\s]/i.test(content)) {
       const numberedMatch = content.match(/^(\d+)(?:[\.、．)\-]\s*|\s+)(.+)/);
       if (numberedMatch) {
         content = 'Q: ' + numberedMatch[2];
+      } else if (hashes.length >= 2) {
+        // 仅对 ## 及以上深度启用纯文本兜底（h1 保留为文档标题）
+        const isChineseSection = /^[一二三四五六七八九十百]+\s*[、，,.]/.test(content);
+        const isNonQuestion = /^(参考|总结|附录|小结|参考资料|References|前言|后记|致谢|鸣谢)/i.test(content);
+        if (!isChineseSection && !isNonQuestion) {
+          content = 'Q: ' + content;
+        }
       }
     }
 

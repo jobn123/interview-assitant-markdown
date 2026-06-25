@@ -219,14 +219,19 @@ test('多个显式 A: 标题，最后一个生效', () => {
 });
 
 test('嵌套标题 (###) 在答案中', () => {
+  // 纯文本子标题会被兜底规则转为 Q:，不再视为答案的一部分
   const input = `## Q: 问题？
 ### 子标题
 子内容。
 
 更多内容。`;
   const result = parseMarkdown(input);
-  assertEqual(result.pairs.length, 1);
-  assert(result.pairs[0].answer.includes('### 子标题'));
+  // 子标题被识别为新问题，所以现在是 2 对 Q&A
+  assertEqual(result.pairs.length, 2);
+  assertEqual(result.pairs[0].question, '问题？');
+  assertEqual(result.pairs[1].question, '子标题');
+  assert(result.pairs[1].answer.includes('子内容'));
+  assert(result.pairs[1].answer.includes('更多内容'));
 });
 
 test('Q: 后有额外内容再换行', () => {
@@ -477,6 +482,76 @@ this 指向规则...`;
   assertEqual(result.pairs[0].question, '事件循环（Event Loop）');
   assertEqual(result.pairs[1].question, '闭包、作用域链、this 指向');
   assert(result.preamble.includes('JavaScript 核心'));
+});
+
+// ==================== 纯文本标题 → 隐式问题（兜底规则） ====================
+
+test('兜底规则：纯文本标题自动识别为问题', () => {
+  const input = `### 事件循环（Event Loop）
+事件循环是js实现异步的核心机制。
+
+### 闭包
+闭包是指函数能够访问其外部作用域变量的能力。`;
+  const result = parseMarkdown(input);
+  assertEqual(result.pairs.length, 2);
+  assertEqual(result.pairs[0].question, '事件循环（Event Loop）');
+  assert(result.pairs[0].answer.includes('异步的核心机制'));
+  assertEqual(result.pairs[1].question, '闭包');
+  assert(result.pairs[1].answer.includes('外部作用域'));
+});
+
+test('兜底规则：中文数字章节不被识别为问题', () => {
+  const input = `## 一、JavaScript 核心
+这是介绍内容。
+
+### 1. 事件循环
+答案。`;
+  const result = parseMarkdown(input);
+  assertEqual(result.pairs.length, 1, '中文数字一、不应被识别为问题');
+  assertEqual(result.pairs[0].question, '事件循环');
+  assert(result.preamble.includes('JavaScript 核心'));
+});
+
+test('兜底规则：参考资料/总结等不被识别为问题', () => {
+  // 这些标题被 isNonQuestion 排除，不会转为 Q:
+  // 由于隐式答案模式：Q 后面直至下一个 Q 的内容都算答案
+  const input = `## Q: 第一题？
+答案一。
+
+## 参考资料
+- 链接1
+- 链接2`;
+  const result = parseMarkdown(input);
+  // 参考资料不被识别为新问题，只有第一题是问题
+  assertEqual(result.pairs.length, 1, '参考资料不应被识别为问题');
+  assertEqual(result.pairs[0].question, '第一题？');
+  // 参考资料被吸入隐式答案
+  assert(result.pairs[0].answer.includes('参考资料'));
+});
+
+test('兜底规则：前言/后记/致谢不被识别为问题', () => {
+  const input = `## 前言
+这是前言内容。
+
+## Q: 问题？
+答案。`;
+  const result = parseMarkdown(input);
+  // 前言在被排除且出现在第一个 Q 之前 → preamble
+  assertEqual(result.pairs.length, 1);
+  assertEqual(result.pairs[0].question, '问题？');
+  assert(result.preamble.includes('前言'));
+});
+
+test('兜底规则：无标记标题，中文全角括号内的内容正常工作', () => {
+  const input = `## 构建理念的根本差异
+Webpack 的核心思想是"一切皆模块"。
+
+## HMR（热模块替换）机制对比
+HMR 是衡量开发体验的核心指标。`;
+  const result = parseMarkdown(input);
+  assertEqual(result.pairs.length, 2);
+  assertEqual(result.pairs[0].question, '构建理念的根本差异');
+  assertEqual(result.pairs[1].question, 'HMR（热模块替换）机制对比');
 });
 
 // ==================== 结果汇总 ====================

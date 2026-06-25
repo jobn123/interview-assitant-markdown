@@ -22,6 +22,9 @@
 
 ## 使用方式
 
+### 🌐 在线体验
+直接访问：**https://jobn123.github.io/interview-assitant-markdown/**
+
 ### Web App
 直接用浏览器打开 `web/index.html`，粘贴或拖拽 `.md` 文件即可。
 

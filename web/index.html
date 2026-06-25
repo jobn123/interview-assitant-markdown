@@ -439,6 +439,15 @@ main {
   body { font-size: 12pt; }
 }
 </style>
+
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-7K6V8ESG2L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-7K6V8ESG2L');
+</script>
 </head>
 <body>
 
@@ -487,6 +496,16 @@ main {
 </main>
 
 <script>
+// ==================== GA4 Tracking ====================
+var IA_GA_ID = 'G-7K6V8ESG2L';
+var _iaFileLoaded = false;
+
+function track(eventName, params) {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', eventName, params);
+  }
+}
+
 // ==================== Core Parser (内嵌) ====================
 function normalizeMarkdown(text) {
   const lines = text.split('\n');
@@ -774,6 +793,7 @@ const $themeBtn = document.getElementById('theme-btn');
 
 // ==================== View Switching ====================
 function switchView(view) {
+  track('view_switched', { from: currentView, to: view });
   currentView = view;
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.view === view);
@@ -786,6 +806,10 @@ function switchView(view) {
     if (text.trim()) {
       parseResult = parseMarkdown(text);
       renderReview();
+      track('review_started', {
+        question_count: parseResult ? parseResult.pairs.length : 0,
+        source: _iaFileLoaded ? 'file' : 'paste'
+      });
     } else {
       $qaContainer.innerHTML = '<div class="empty-state"><div class="icon">📝</div><h3>还没有内容</h3><p>请先在编辑区粘贴你的 Markdown 笔记</p></div>';
     }
@@ -842,7 +866,13 @@ function renderReview() {
 function toggleAnswer(qaId) {
   const card = document.querySelector(`[data-qa-id="${qaId}"]`);
   if (card) {
+    var wasRevealed = card.classList.contains('revealed');
     card.classList.toggle('revealed');
+    var questionIndex = parseInt(qaId.split('-')[1], 10);
+    track('answer_toggled', {
+      action: wasRevealed ? 'collapse' : 'expand',
+      question_index: isNaN(questionIndex) ? -1 : questionIndex
+    });
     updateCounter();
     updateToggleButton();
   }
@@ -865,8 +895,10 @@ function toggleAll() {
   const revealed = document.querySelectorAll('.qa-card.revealed').length;
   if (revealed === total && total > 0) {
     hideAll();
+    track('all_toggled', { action: 'hide_all', total_questions: total });
   } else {
     showAll();
+    track('all_toggled', { action: 'show_all', total_questions: total });
   }
 }
 
@@ -911,15 +943,19 @@ document.addEventListener('drop', (e) => {
   $dragOverlay.classList.remove('active');
   const file = e.dataTransfer.files[0];
   if (file && (file.name.endsWith('.md') || file.name.endsWith('.markdown'))) {
-    loadFile(file);
+    loadFile(file, 'drop');
   }
 });
 
-function loadFile(file) {
+function loadFile(file, method) {
+  method = method || 'button';
+  _iaFileLoaded = true;
+  var ext = file.name.split('.').pop().toLowerCase();
+  track('file_loaded', { method: method, file_extension: ext });
   const reader = new FileReader();
   reader.onload = (ev) => {
     $markdownInput.value = ev.target.result;
-    $fileInfo.textContent = `已加载: ${file.name}`;
+    $fileInfo.textContent = '已加载: ' + file.name;
     saveToStorage();
     parseResult = parseMarkdown($markdownInput.value);
     if (currentView === 'review') renderReview();
@@ -932,16 +968,19 @@ document.addEventListener('keydown', (e) => {
   // Shift+A: toggle all
   if (e.shiftKey && (e.key === 'A' || e.key === 'a')) {
     e.preventDefault();
+    track('shortcut_used', { shortcut: 'toggle_all' });
     toggleAll();
   }
   // Shift+E: switch to Edit
   if (e.shiftKey && (e.key === 'E' || e.key === 'e')) {
     e.preventDefault();
+    track('shortcut_used', { shortcut: 'switch_edit' });
     switchView('edit');
   }
   // Shift+R: switch to Review
   if (e.shiftKey && (e.key === 'R' || e.key === 'r')) {
     e.preventDefault();
+    track('shortcut_used', { shortcut: 'switch_review' });
     switchView('review');
   }
 });
@@ -961,6 +1000,7 @@ function loadFromStorage() {
 }
 
 $markdownInput.addEventListener('input', () => {
+  _iaFileLoaded = false;
   // Debounced save
   clearTimeout($markdownInput._saveTimeout);
   $markdownInput._saveTimeout = setTimeout(saveToStorage, 500);
@@ -975,9 +1015,13 @@ function initTheme() {
 }
 
 function applyTheme(theme) {
+  var oldTheme = document.documentElement.getAttribute('data-theme');
   document.documentElement.setAttribute('data-theme', theme);
   $themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
   try { localStorage.setItem('ia-theme', theme); } catch(e) {}
+  if (oldTheme && oldTheme !== theme) {
+    track('theme_switched', { new_theme: theme });
+  }
 }
 
 $themeBtn.addEventListener('click', () => {

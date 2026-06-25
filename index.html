@@ -880,9 +880,9 @@ function updateToggleButton() {
   const total = document.querySelectorAll('.qa-card').length;
   const revealed = document.querySelectorAll('.qa-card.revealed').length;
   if (revealed === total && total > 0) {
-    $toggleAllBtn.textContent = '🙈 隐藏全部';
+    $toggleAllBtn.innerHTML = '🙈 隐藏全部<kbd>Shift+A</kbd>';
   } else {
-    $toggleAllBtn.textContent = '👁️ 显示全部';
+    $toggleAllBtn.innerHTML = '👁️ 显示全部<kbd>Shift+A</kbd>';
   }
 }
 

@@ -425,18 +425,194 @@ main {
 
 /* ========== Print Styles ========== */
 @media print {
-  header, .review-toolbar, .toggle-icon, .input-actions, .tab-bar, kbd {
+  header, .review-toolbar, .toggle-icon, .input-actions, .tab-bar, kbd,
+  .ec-toolbar, .ec-delete-btn, .ec-bookmark-btn, .ec-meta, .ec-add-form {
     display: none !important;
   }
-  .qa-body {
+  .qa-body, .ec-body {
     max-height: none !important;
   }
-  .qa-card {
+  .qa-card, .ec-card {
     break-inside: avoid;
     border: 1px solid #ddd;
     margin-bottom: 12px;
   }
   body { font-size: 12pt; }
+}
+
+/* ========== 错题集 (Error Collection) Styles ========== */
+.ec-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  position: sticky;
+  top: 72px;
+  z-index: 50;
+}
+
+.ec-card {
+  margin-bottom: 20px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  transition: box-shadow var(--transition);
+}
+
+.ec-card:hover { box-shadow: var(--shadow); }
+
+.ec-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--question-bg);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition);
+  border-bottom: 1px solid transparent;
+}
+
+.ec-header:hover { background: var(--question-hover); }
+
+.ec-card.revealed .ec-header {
+  border-bottom-color: var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.ec-question {
+  flex: 1;
+  padding-top: 2px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.ec-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.45s ease-out;
+}
+
+.ec-card.revealed .ec-body {
+  max-height: 8000px;
+  transition: max-height 0.6s ease-in;
+}
+
+.ec-answer {
+  padding: 20px;
+  background: var(--answer-bg);
+  line-height: 1.8;
+}
+
+.ec-answer .qa-answer { padding: 0; }
+
+.ec-meta {
+  padding: 8px 20px 16px;
+  background: var(--answer-bg);
+  display: flex;
+  gap: 16px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+/* Bookmark button on review cards */
+.ec-bookmark-btn {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  opacity: 0.5;
+  margin-left: 4px;
+  line-height: 1;
+}
+
+.ec-bookmark-btn:hover { opacity: 1; background: var(--question-hover); }
+
+.ec-bookmark-btn.active {
+  opacity: 1;
+  background: #fff3cd;
+  border-color: #ffc107;
+}
+
+[data-theme="dark"] .ec-bookmark-btn.active {
+  background: #3a3a1a;
+  border-color: #ffc107;
+}
+
+/* Delete button on error cards */
+.ec-delete-btn {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  opacity: 0.4;
+  line-height: 1;
+}
+
+.ec-delete-btn:hover { opacity: 1; background: rgba(255,0,0,0.1); }
+
+/* Manual add form */
+.ec-add-form {
+  margin-bottom: 20px;
+  border-radius: var(--radius);
+  border: 2px dashed var(--accent);
+  background: var(--bg-secondary);
+  overflow: hidden;
+  transition: all var(--transition);
+}
+
+.ec-add-form-inner {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ec-input, .ec-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: border var(--transition);
+}
+
+.ec-input:focus, .ec-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ec-textarea {
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.ec-add-actions {
+  display: flex;
+  gap: 10px;
 }
 </style>
 
@@ -452,10 +628,11 @@ main {
 <body>
 
 <header>
-  <h1>📋 Interview Assistant</h1>
+  <h1>📋 Markdown 面试助手 </h1>
   <div class="tab-bar">
     <button class="tab-btn active" data-view="edit">✏️ 编辑<kbd>Shift+E</kbd></button>
     <button class="tab-btn" data-view="review">📖 复习<kbd>Shift+R</kbd></button>
+    <button class="tab-btn" data-view="error">📌 错题集<kbd>Shift+W</kbd></button>
   </div>
   <div class="header-actions">
     <button class="theme-btn" id="theme-btn" title="切换主题">🌙</button>
@@ -489,6 +666,38 @@ main {
       <button class="btn btn-outline" id="back-edit-btn" style="margin-left:8px;">✏️ 返回编辑<kbd>Shift+E</kbd></button>
     </div>
     <div id="qa-container"></div>
+  </section>
+
+  <!-- Error Collection View -->
+  <section id="error-view" class="view">
+    <div class="ec-toolbar" id="ec-toolbar">
+      <button class="btn btn-primary" id="ec-add-btn">➕ 手动添加</button>
+      <button class="btn btn-outline" id="ec-toggle-all-btn">👁️ 显示全部<kbd>Shift+A</kbd></button>
+      <span class="counter" id="ec-counter">0/0 已显示</span>
+      <button class="btn btn-outline" id="ec-clear-btn" style="margin-left:auto;">🗑️ 清空</button>
+    </div>
+
+    <!-- Manual add form (initially hidden) -->
+    <div id="ec-add-form" class="ec-add-form" style="display:none">
+      <div class="ec-add-form-inner">
+        <input type="text" id="ec-new-question" class="ec-input"
+          placeholder="输入知识点或问题...">
+        <textarea id="ec-new-answer" class="ec-textarea"
+          placeholder="输入答案或备注（可选）..."></textarea>
+        <div class="ec-add-actions">
+          <button class="btn btn-primary" id="ec-save-btn">✅ 保存</button>
+          <button class="btn btn-outline" id="ec-cancel-btn">✖️ 取消</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="ec-container">
+      <div class="empty-state">
+        <div class="icon">📌</div>
+        <h3>错题集为空</h3>
+        <p>在复习模式中点击 <strong>📌</strong> 按钮添加题目，或点击上方「手动添加」</p>
+      </div>
+    </div>
   </section>
 
   <!-- Drag overlay -->
@@ -779,9 +988,13 @@ function escapeHTML(str) {
 let parseResult = null;
 let currentView = 'edit';
 
+// Error collection state
+let errorItems = [];
+
 // ==================== DOM Elements ====================
 const $editView = document.getElementById('edit-view');
 const $reviewView = document.getElementById('review-view');
+const $errorView = document.getElementById('error-view');
 const $markdownInput = document.getElementById('markdown-input');
 const $qaContainer = document.getElementById('qa-container');
 const $toggleAllBtn = document.getElementById('toggle-all-btn');
@@ -790,6 +1003,18 @@ const $fileInput = document.getElementById('file-input');
 const $fileInfo = document.getElementById('file-info');
 const $dragOverlay = document.getElementById('drag-overlay');
 const $themeBtn = document.getElementById('theme-btn');
+
+// Error collection DOM elements
+const $ecContainer = document.getElementById('ec-container');
+const $ecAddBtn = document.getElementById('ec-add-btn');
+const $ecToggleAllBtn = document.getElementById('ec-toggle-all-btn');
+const $ecCounter = document.getElementById('ec-counter');
+const $ecClearBtn = document.getElementById('ec-clear-btn');
+const $ecAddForm = document.getElementById('ec-add-form');
+const $ecSaveBtn = document.getElementById('ec-save-btn');
+const $ecCancelBtn = document.getElementById('ec-cancel-btn');
+const $ecNewQuestion = document.getElementById('ec-new-question');
+const $ecNewAnswer = document.getElementById('ec-new-answer');
 
 // ==================== View Switching ====================
 function switchView(view) {
@@ -800,6 +1025,7 @@ function switchView(view) {
   });
   $editView.classList.toggle('active', view === 'edit');
   $reviewView.classList.toggle('active', view === 'review');
+  $errorView.classList.toggle('active', view === 'error');
 
   if (view === 'review') {
     const text = $markdownInput.value;
@@ -813,11 +1039,39 @@ function switchView(view) {
     } else {
       $qaContainer.innerHTML = '<div class="empty-state"><div class="icon">📝</div><h3>还没有内容</h3><p>请先在编辑区粘贴你的 Markdown 笔记</p></div>';
     }
+  } else if (view === 'error') {
+    renderErrorView();
+    track('error_view_opened', { item_count: errorItems.length });
   }
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => switchView(btn.dataset.view));
+});
+
+// ==================== Error Collection Event Bindings ====================
+$ecAddBtn.addEventListener('click', showECAddForm);
+$ecToggleAllBtn.addEventListener('click', toggleECAll);
+$ecClearBtn.addEventListener('click', function() {
+  if (errorItems.length === 0) return;
+  if (confirm('确定要清空错题集吗（共 ' + errorItems.length + ' 项）？此操作不可撤销。')) {
+    var count = errorItems.length;
+    errorItems = [];
+    saveErrorCollection();
+    renderErrorView();
+    if (currentView === 'review') renderReview();
+    track('error_collection_cleared', { count: count });
+  }
+});
+$ecSaveBtn.addEventListener('click', handleECAddSave);
+$ecCancelBtn.addEventListener('click', hideECAddForm);
+
+// Enter key saves in the add form
+$ecNewQuestion.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleECAddSave();
+  }
 });
 
 // ==================== Render Review ====================
@@ -836,6 +1090,9 @@ function renderReview() {
   } else {
     pairs.forEach((pair, idx) => {
       const hTag = 'h' + Math.min(pair.level, 6);
+      const isBookmarked = errorItems.some(item => item.source === 'qa' && item.sourceId === pair.id);
+      const bookmarkClass = isBookmarked ? 'ec-bookmark-btn active' : 'ec-bookmark-btn';
+      const bookmarkTitle = isBookmarked ? '从错题集移除' : '添加到错题集';
       html += `
         <div class="qa-card" data-qa-id="${pair.id}">
           <div class="qa-header" onclick="toggleAnswer('${pair.id}')">
@@ -843,6 +1100,9 @@ function renderReview() {
             <div class="qa-question">
               <${hTag}>${escapeHTML(pair.question)}</${hTag}>
             </div>
+            <button class="${bookmarkClass}" onclick="event.stopPropagation(); toggleErrorBookmark('${pair.id}')" title="${bookmarkTitle}">
+              📌
+            </button>
           </div>
           <div class="qa-body">
             <div class="qa-answer">${renderMarkdownToHTML(pair.answer) || '<em style="color:var(--text-secondary)">（未填写答案）</em>'}</div>
@@ -912,9 +1172,9 @@ function updateToggleButton() {
   const total = document.querySelectorAll('.qa-card').length;
   const revealed = document.querySelectorAll('.qa-card.revealed').length;
   if (revealed === total && total > 0) {
-    $toggleAllBtn.textContent = '🙈 隐藏全部';
+    $toggleAllBtn.innerHTML = '🙈 隐藏全部<kbd>Shift+A</kbd>';
   } else {
-    $toggleAllBtn.textContent = '👁️ 显示全部';
+    $toggleAllBtn.innerHTML = '👁️ 显示全部<kbd>Shift+A</kbd>';
   }
 }
 
@@ -963,13 +1223,217 @@ function loadFile(file, method) {
   reader.readAsText(file);
 }
 
+// ==================== Error Collection Persistence ====================
+function loadErrorCollection() {
+  try {
+    const saved = localStorage.getItem('ia-error-collection');
+    if (saved) {
+      errorItems = JSON.parse(saved);
+      if (!Array.isArray(errorItems)) {
+        errorItems = errorItems.items || [];
+      }
+    } else {
+      errorItems = [];
+    }
+  } catch(e) {
+    errorItems = [];
+  }
+}
+
+function saveErrorCollection() {
+  try {
+    localStorage.setItem('ia-error-collection', JSON.stringify(errorItems));
+  } catch(e) { /* quota exceeded, ignore */ }
+}
+
+// ==================== Error Collection CRUD ====================
+function generateECId() {
+  return 'ec-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+}
+
+function addToErrorCollection(question, answer, source, sourceId) {
+  // Dedup: QA source items check by sourceId
+  if (source === 'qa' && sourceId) {
+    const exists = errorItems.some(item => item.source === 'qa' && item.sourceId === sourceId);
+    if (exists) return false;
+  }
+  errorItems.push({
+    id: generateECId(),
+    question: question,
+    answer: answer || '',
+    source: source,
+    sourceId: sourceId || null,
+    createdAt: Date.now()
+  });
+  saveErrorCollection();
+  return true;
+}
+
+function removeFromErrorCollection(id) {
+  const idx = errorItems.findIndex(item => item.id === id);
+  if (idx === -1) return false;
+  errorItems.splice(idx, 1);
+  saveErrorCollection();
+  return true;
+}
+
+function confirmRemoveECItem(id) {
+  const item = errorItems.find(i => i.id === id);
+  if (!item) return;
+  const preview = item.question.length > 30 ? item.question.slice(0, 30) + '...' : item.question;
+  if (confirm('确定要从错题集中移除「' + preview + '」吗？')) {
+    removeFromErrorCollection(id);
+    renderErrorView();
+    if (currentView === 'review') renderReview();
+    track('error_collection_removed', { source: item.source });
+  }
+}
+
+function toggleErrorBookmark(qaId) {
+  if (!parseResult) return;
+  const pair = parseResult.pairs.find(p => p.id === qaId);
+  if (!pair) return;
+  const existing = errorItems.find(item => item.source === 'qa' && item.sourceId === qaId);
+  if (existing) {
+    const preview = pair.question.length > 30 ? pair.question.slice(0, 30) + '...' : pair.question;
+    if (confirm('确定要从错题集中移除「' + preview + '」吗？')) {
+      removeFromErrorCollection(existing.id);
+      track('error_collection_toggled', { action: 'remove', source: 'qa' });
+    }
+  } else {
+    addToErrorCollection(pair.question, pair.answer, 'qa', qaId);
+    track('error_collection_toggled', { action: 'add', source: 'qa' });
+  }
+  renderReview();
+}
+
+// ==================== Render Error Collection View ====================
+function renderErrorView() {
+  if (errorItems.length === 0) {
+    $ecContainer.innerHTML = '<div class="empty-state"><div class="icon">📌</div><h3>错题集为空</h3><p>在复习模式中点击 <strong>📌</strong> 按钮添加题目，或点击上方「手动添加」</p></div>';
+    $ecCounter.textContent = '0/0 已显示';
+    if ($ecToggleAllBtn) $ecToggleAllBtn.innerHTML = '👁️ 显示全部<kbd>Shift+A</kbd>';
+    return;
+  }
+
+  let html = '';
+  errorItems.forEach((item) => {
+    const dateStr = new Date(item.createdAt).toLocaleDateString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+    const sourceText = item.source === 'manual' ? '手动添加' : '来自复习';
+    const answerHtml = item.answer
+      ? renderMarkdownToHTML(item.answer)
+      : '<em style="color:var(--text-secondary)">（未填写答案）</em>';
+
+    html += '<div class="ec-card" data-ec-id="' + item.id + '">'
+      + '<div class="ec-header" onclick="toggleECAnswer(\'' + item.id + '\')">'
+      + '<span class="toggle-icon">+</span>'
+      + '<div class="ec-question">' + escapeHTML(item.question) + '</div>'
+      + '<button class="ec-delete-btn" onclick="event.stopPropagation(); confirmRemoveECItem(\'' + item.id + '\')" title="从错题集移除">❌</button>'
+      + '</div>'
+      + '<div class="ec-body">'
+      + '<div class="ec-answer"><div class="qa-answer">' + answerHtml + '</div></div>'
+      + '<div class="ec-meta">'
+      + '<span class="ec-source">来源: ' + sourceText + '</span>'
+      + '<span class="ec-date">添加于: ' + dateStr + '</span>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  });
+
+  $ecContainer.innerHTML = html;
+  updateECCounter();
+  updateECToggleButton();
+}
+
+// ==================== Error Collection Toggle Logic ====================
+function toggleECAnswer(ecId) {
+  const card = document.querySelector('[data-ec-id="' + ecId + '"]');
+  if (card) {
+    card.classList.toggle('revealed');
+    updateECCounter();
+    updateECToggleButton();
+  }
+}
+
+function showECAll() {
+  document.querySelectorAll('.ec-card').forEach(function(c) { c.classList.add('revealed'); });
+  updateECCounter();
+  updateECToggleButton();
+}
+
+function hideECAll() {
+  document.querySelectorAll('.ec-card').forEach(function(c) { c.classList.remove('revealed'); });
+  updateECCounter();
+  updateECToggleButton();
+}
+
+function toggleECAll() {
+  const total = document.querySelectorAll('.ec-card').length;
+  const revealed = document.querySelectorAll('.ec-card.revealed').length;
+  if (revealed === total && total > 0) {
+    hideECAll();
+    track('ec_all_toggled', { action: 'hide_all', total_items: total });
+  } else {
+    showECAll();
+    track('ec_all_toggled', { action: 'show_all', total_items: total });
+  }
+}
+
+function updateECCounter() {
+  const total = document.querySelectorAll('.ec-card').length;
+  const revealed = document.querySelectorAll('.ec-card.revealed').length;
+  $ecCounter.textContent = revealed + '/' + total + ' 已显示';
+}
+
+function updateECToggleButton() {
+  const total = document.querySelectorAll('.ec-card').length;
+  const revealed = document.querySelectorAll('.ec-card.revealed').length;
+  if (revealed === total && total > 0) {
+    $ecToggleAllBtn.innerHTML = '🙈 隐藏全部<kbd>Shift+A</kbd>';
+  } else {
+    $ecToggleAllBtn.innerHTML = '👁️ 显示全部<kbd>Shift+A</kbd>';
+  }
+}
+
+// ==================== Manual Add Form ====================
+function showECAddForm() {
+  $ecAddForm.style.display = 'block';
+  $ecNewQuestion.focus();
+}
+
+function hideECAddForm() {
+  $ecAddForm.style.display = 'none';
+  $ecNewQuestion.value = '';
+  $ecNewAnswer.value = '';
+}
+
+function handleECAddSave() {
+  const question = $ecNewQuestion.value.trim();
+  const answer = $ecNewAnswer.value.trim();
+  if (!question) {
+    alert('请输入知识点或问题');
+    return;
+  }
+  addToErrorCollection(question, answer, 'manual', null);
+  hideECAddForm();
+  renderErrorView();
+  track('error_collection_added', { source: 'manual' });
+}
+
 // ==================== Keyboard Shortcuts ====================
 document.addEventListener('keydown', (e) => {
   // Shift+A: toggle all
   if (e.shiftKey && (e.key === 'A' || e.key === 'a')) {
     e.preventDefault();
     track('shortcut_used', { shortcut: 'toggle_all' });
-    toggleAll();
+    if (currentView === 'error') {
+      toggleECAll();
+    } else {
+      toggleAll();
+    }
   }
   // Shift+E: switch to Edit
   if (e.shiftKey && (e.key === 'E' || e.key === 'e')) {
@@ -982,6 +1446,12 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     track('shortcut_used', { shortcut: 'switch_review' });
     switchView('review');
+  }
+  // Shift+W: switch to Error Collection
+  if (e.shiftKey && (e.key === 'W' || e.key === 'w')) {
+    e.preventDefault();
+    track('shortcut_used', { shortcut: 'switch_error' });
+    switchView('error');
   }
 });
 
@@ -1033,6 +1503,7 @@ $themeBtn.addEventListener('click', () => {
 function init() {
   initTheme();
   loadFromStorage();
+  loadErrorCollection();
   // Pre-parse if there's content
   if ($markdownInput.value.trim()) {
     parseResult = parseMarkdown($markdownInput.value);

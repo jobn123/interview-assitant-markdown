@@ -25,8 +25,8 @@ sample-notes.md         # Demo markdown showing all supported formats
 # Run parser tests
 node core/parser.test.js
 
-# Deploy web app to GitHub Pages
-git checkout gh-pages && git checkout master -- web/index.html && git commit -m "deploy" && git push && git checkout master
+# Deploy web app to GitHub Pages (must update BOTH root index.html and web/index.html)
+git checkout gh-pages && git checkout master -- web/index.html && cp web/index.html index.html && git add index.html web/index.html && git commit -m "deploy" && git push origin gh-pages && git checkout master
 ```
 
 The web app is deployed by copying `web/index.html` to the `gh-pages` branch root.

@@ -708,6 +708,8 @@ main {
 // ==================== GA4 Tracking ====================
 var IA_GA_ID = 'G-7K6V8ESG2L';
 var _iaFileLoaded = false;
+var _fileGeneration = Date.now();
+var _lastParsedText = '';
 
 function track(eventName, params) {
   if (typeof gtag !== 'undefined') {
@@ -850,7 +852,7 @@ function parseMarkdown(text) {
         finalizeCurrentQuestion();
         sawFirstQuestion = true;
         currentQuestion = {
-          id: 'q-' + pairs.length,
+          id: 'q-' + _fileGeneration + '-' + pairs.length,
           question: qText,
           answer: '',
           type: null,
@@ -1030,6 +1032,10 @@ function switchView(view) {
   if (view === 'review') {
     const text = $markdownInput.value;
     if (text.trim()) {
+      if (text !== _lastParsedText) {
+        _fileGeneration = Date.now();
+        _lastParsedText = text;
+      }
       parseResult = parseMarkdown(text);
       renderReview();
       track('review_started', {
@@ -1217,6 +1223,7 @@ function loadFile(file, method) {
     $markdownInput.value = ev.target.result;
     $fileInfo.textContent = '已加载: ' + file.name;
     saveToStorage();
+    _fileGeneration = Date.now();
     parseResult = parseMarkdown($markdownInput.value);
     if (currentView === 'review') renderReview();
   };

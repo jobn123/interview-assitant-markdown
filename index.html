@@ -356,7 +356,28 @@ main {
 .qa-answer p { margin-bottom: 12px; }
 .qa-answer p:last-child { margin-bottom: 0; }
 .qa-answer ul, .qa-answer ol { margin: 8px 0; padding-left: 24px; }
-.qa-answer li { margin-bottom: 4px; }
+.qa-answer li, .preamble li, .postamble li { margin-bottom: 4px; }
+.qa-answer li.task-checked,
+.qa-answer li.task-unchecked,
+.preamble li.task-checked,
+.preamble li.task-unchecked,
+.postamble li.task-checked,
+.postamble li.task-unchecked {
+  list-style: none;
+}
+.qa-answer li input[type="checkbox"],
+.preamble li input[type="checkbox"],
+.postamble li input[type="checkbox"] {
+  margin-right: 6px;
+  vertical-align: middle;
+  accent-color: var(--accent);
+}
+.qa-answer del, .qa-answer s,
+.preamble del, .preamble s,
+.postamble del, .postamble s {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
 .qa-answer pre {
   background: var(--bg-secondary);
   padding: 16px;
@@ -382,17 +403,19 @@ main {
   margin: 12px 0;
   color: var(--text-secondary);
 }
-.qa-answer table {
+.qa-answer table, .preamble table, .postamble table {
   border-collapse: collapse;
   width: 100%;
   margin: 12px 0;
 }
-.qa-answer th, .qa-answer td {
+.qa-answer th, .qa-answer td,
+.preamble th, .preamble td,
+.postamble th, .postamble td {
   border: 1px solid var(--border);
   padding: 8px 12px;
   text-align: left;
 }
-.qa-answer th { background: var(--bg-secondary); }
+.qa-answer th, .preamble th, .postamble th { background: var(--bg-secondary); }
 
 /* Preamble / Postamble */
 .preamble, .postamble {
@@ -927,19 +950,66 @@ function renderMarkdownToHTML(md) {
     return `%%CODEBLOCK_${idx}%%`;
   });
 
+  // Horizontal rules (before inline formatting so * * * isn't parsed as italic)
+  html = html.replace(/^(-{3,}|\*{3,}|_{3,})\s*$/gm, '<hr>');
+  html = html.replace(/^(\s*[-*_]\s+){2,}[-*_]\s*$/gm, '<hr>');
+
   // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-  // Bold & italic
+  // Bold & italic & strikethrough
   html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
 
   // Images (before links)
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
 
   // Links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+  // Autolinks <https://...> and <email@...>
+  html = html.replace(/<([a-z][a-z0-9+.-]*:\/\/[^\s>]+)>/gi, '<a href="$1" target="_blank">$1</a>');
+  html = html.replace(/<([a-zA-Z0-9.!#$%&'"*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)>/g, '<a href="mailto:$1">$1</a>');
+
+  // Tables (after inline formatting so **bold** etc. inside cells are rendered)
+  html = html.replace(/(?:^[ \t]*\|.+\|[ \t]*$\n?)+/gm, function(tableBlock) {
+    var lines = tableBlock.split('\n').filter(function(l) { return l.trim(); });
+    if (lines.length < 2) return tableBlock;
+    // Verify second line is a separator row (e.g. | :--- | :---: | ---: |)
+    if (!/^\|[\s:\-|]+\|$/.test(lines[1].trim())) return tableBlock;
+
+    var parseRow = function(line) {
+      return line.trim().replace(/^\||\|$/g, '').split('|').map(function(c) { return c.trim(); });
+    };
+
+    var headerCells = parseRow(lines[0]);
+    var aligns = parseRow(lines[1]).map(function(c) {
+      if (/^:.*:$/.test(c)) return 'center';
+      if (/:$/.test(c)) return 'right';
+      return 'left';
+    });
+
+    var result = '<table><thead><tr>';
+    headerCells.forEach(function(cell) {
+      result += '<th>' + cell + '</th>';
+    });
+    result += '</tr></thead><tbody>';
+
+    for (var i = 2; i < lines.length; i++) {
+      var cells = parseRow(lines[i]);
+      result += '<tr>';
+      cells.forEach(function(cell, j) {
+        var align = aligns[j] || 'left';
+        result += '<td style="text-align:' + align + '">' + cell + '</td>';
+      });
+      result += '</tr>';
+    }
+    result += '</tbody></table>';
+
+    return result;
+  });
 
   // Headings (atx)
   html = html.replace(/^###### (.+)$/gm, '<h6>$1</h6>');
@@ -949,12 +1019,14 @@ function renderMarkdownToHTML(md) {
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
-  // Horizontal rules
-  html = html.replace(/^(---|\*\*\*|___)\s*$/gm, '<hr>');
-
   // Blockquotes
   html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
   html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+
+  // Task lists (must be before general list regex)
+  html = html.replace(/^[\-\*] \[x\] (.+)$/gim, '<li class="task-checked"><input type="checkbox" disabled="" checked=""> $1</li>');
+  html = html.replace(/^[\-\*] \[X\] (.+)$/gim, '<li class="task-checked"><input type="checkbox" disabled="" checked=""> $1</li>');
+  html = html.replace(/^[\-\*] \[ \] (.+)$/gim, '<li class="task-unchecked"><input type="checkbox" disabled=""> $1</li>');
 
   // Unordered lists
   html = html.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
@@ -967,10 +1039,10 @@ function renderMarkdownToHTML(md) {
   html = html.replace(/<\/?oli>/g, (m) => m === '<oli>' ? '<li>' : '</li>');
 
   // Paragraphs (consecutive non-empty, non-tag-wrapped lines)
-  html = html.replace(/^(?!<[houlbip]|<hr|<pre|<code|<table)(.+)$/gm, '<p>$1</p>');
+  html = html.replace(/^(?!<\/?[houlbipt]|<hr|<pre|<code)(.+)$/gm, '<p>$1</p>');
   // Fix: unwrap single <p> that wraps block elements
-  html = html.replace(/<p><(h[1-6]|ul|ol|pre|blockquote|hr|table)/g, '<$1');
-  html = html.replace(/<\/(h[1-6]|ul|ol|pre|blockquote|table)><\/p>/g, '</$1>');
+  html = html.replace(/<p><(h[1-6]|ul|ol|pre|blockquote|hr|table|thead|tbody|tr|th|td)/g, '<$1');
+  html = html.replace(/<\/(h[1-6]|ul|ol|pre|blockquote|table|thead|tbody|tr|th|td)><\/p>/g, '</$1>');
 
   // Restore code blocks
   html = html.replace(/%%CODEBLOCK_(\d+)%%/g, (_, idx) => {
